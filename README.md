@@ -37,7 +37,8 @@ This gives you:
 - **Hot-pluggable modules** — start, stop, replace, and update individual modules without restarting the compositor
 - **Cross-language modules** — anything that can write RGBA to a Unix socket can participate, not just Go
 - **Independent module lifecycles** — each module ships, releases, and updates on its own schedule
-- **Zero CGO** — Pure Go on the wire and on every platform that supports Unix domain sockets and POSIX `mmap`
+- **Cross-platform** — Linux, macOS, **Windows**, FreeBSD as first-class targets. Windows supports the Unix domain socket transport natively via `AF_UNIX` (since Windows 10 1803, April 2018), so the same `net.Listen("unix", ...)` works on every desktop OS. Future: Redox OS.
+- **Zero CGO** — Pure Go on the wire and on every supported platform. Shared memory uses POSIX `mmap` on Unix-likes and `CreateFileMapping` on Windows, behind a unified Go interface
 
 ```go
 package main
@@ -82,7 +83,7 @@ The `compose` library deliberately lives outside `gogpu/ui` and `gogpu/gogpu`:
 
 - **Not UI-specific.** A module can render with `gg`, with `ui`, or with any third-party Go rendering code. It can even be written in another language and pipe raw RGBA into the socket. Anchoring this in a UI library would be the wrong scope.
 - **Not app-framework specific.** `gogpu` is about "one process renders one window". Multi-process composition is a different problem area with different lifecycle, trust, and protocol concerns.
-- **Platform-specific dependencies belong in their own module.** Unix domain sockets, `mmap`, ring buffers — users of the UI framework should not pay for them transitively.
+- **Platform-specific dependencies belong in their own module.** Unix domain sockets, shared memory primitives (`mmap` on Unix, `CreateFileMapping` on Windows), ring buffers, build-tagged transport implementations — users of the UI framework should not pay for them transitively.
 - **The IPC protocol is a stable compatibility surface.** It needs its own versioning discipline and release cadence so that protocol changes do not force a UI framework release and vice versa.
 - **Precedent.** Qt ships Qt Remote Objects as a separate module. GTK ships Broadway as a separate display backend. Flutter separates Engine from Framework. Mature UI ecosystems consistently separate infrastructure layers from widget layers.
 
@@ -149,9 +150,11 @@ Pixels travel through one of two transports, chosen per module:
 | Transport | Best for | Throughput | Setup |
 |---|---|---|---|
 | **Unix domain socket** | Static / low-rate modules (clocks, weather, calendars) | Hundreds of MB/s on Pi-class hardware | Zero — just connect |
-| **Shared memory ring buffer** | Animated / high-rate modules (notifications, video, charts) | Limited only by memory bandwidth, zero copy | `mmap` a shared file, ring buffer index in the socket channel |
+| **Shared memory ring buffer** | Animated / high-rate modules (notifications, video, charts) | Limited only by memory bandwidth, zero copy | `mmap` (POSIX) or `CreateFileMapping` (Windows) behind a unified interface |
 
-Both transports use POSIX primitives only (no Linux-specific `io_uring`, `eventfd`, or shm segments) to keep the library portable to Redox OS, FreeBSD, and any other POSIX platform.
+**Cross-platform support:** Linux, macOS, FreeBSD, and **Windows 10+** (which gained `AF_UNIX` support in the 1803 release, April 2018, so Go's `net.Listen("unix", ...)` works natively on Windows). Future: Redox OS when its Go toolchain matures.
+
+The library deliberately avoids Linux-specific kernel APIs (`io_uring`, `eventfd`, Linux-specific shm segments) so the design ports cleanly across all desktop OSes. Where POSIX and Windows diverge — fd passing for shared memory is `SCM_RIGHTS` on POSIX and named handles on Windows — a thin Go interface with build tags hides the difference from module authors.
 
 ## Wire protocol
 
