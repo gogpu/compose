@@ -82,7 +82,7 @@ srv.OnFrame(func(f compose.Frame) {
 })
 ```
 
-> **Status: design phase.** APIs above are aspirational — they show the intended shape of the library. See the [Roadmap](#roadmap) section for current progress.
+> Unix socket transport, wire protocol v1, LZ4 compression, pull-based flow control. See the [Roadmap](#roadmap) for current progress.
 
 ## Why a separate library?
 
@@ -191,14 +191,12 @@ The protocol is the stable compatibility surface of compose. Versioning is indep
 
 | Phase | Features | Status |
 |-------|----------|--------|
-| **Phase 0** | Design, ADRs, reference example sketch | Design phase |
-| **Phase 1** | Reference example: compositor + clock module + notification module | Planned |
-| **Phase 2** | Wire protocol v1, framing, header, dirty rects | Planned |
-| **Phase 3** | Unix socket transport, hot-plug, connection management | Planned |
-| **Phase 4** | Shared memory ring buffer transport | Planned |
-| **Phase 5** | Extract stable APIs from the reference example into this library | Planned |
-| **Phase 6** | Multi-screen layout, layered z-order, fade transitions | Future |
-| **Phase 7** | Cross-language module SDK (C header, Rust crate, Python) | Future |
+| **Phase 1** | Wire protocol v1, Unix socket transport, LZ4 compression, public API | Complete |
+| **Phase 2** | Reference examples: compositor + clock + notification (multi-process) | Next |
+| **Phase 3** | Shared memory ring buffer transport (zero-copy) | Planned |
+| **Phase 4** | Delta frames, compression negotiation | Planned |
+| **Phase 5** | Multi-screen layout, layered z-order, fade transitions | Future |
+| **Phase 6** | Cross-language module SDK (C header, Rust crate, Python) | Future |
 
 ## Design principles
 
@@ -222,11 +220,11 @@ The design of `compose` is informed by:
 
 ## Status and contributing
 
-The `compose` library is in the **design phase**. There is no shippable code yet. This repository exists to host the design discussion, the architecture decision records, and (once they exist) the reference example and the extracted library.
+The `compose` library ships a working Unix socket transport with wire protocol v1, LZ4 compression, pull-based flow control, and hot-plug module lifecycle.
 
-The first user is a [Go rewrite of MagicMirror²](https://github.com/gogpu/ui/issues/75) targeting Raspberry Pi and (eventually) Redox OS.
+Known users: [KiGo](https://github.com/AgentNemo00/kigo) (modular Go application using offscreen rendering + multi-process composition).
 
-If you have a use case for multi-process composition in Go and want to influence the design before APIs freeze, please join the [compose RFC discussion](https://github.com/orgs/gogpu/discussions/177) or open an issue describing your scenario. For the related (but distinct) question of in-process multi-window support in `gogpu` itself, see the [multi-window RFC discussion](https://github.com/orgs/gogpu/discussions/167). Real use cases drive both — we deliberately avoid designing against hypotheticals.
+If you have a use case for multi-process composition in Go, please join the [compose RFC discussion](https://github.com/orgs/gogpu/discussions/177) or open an issue describing your scenario.
 
 ## Part of the GoGPU Ecosystem
 
