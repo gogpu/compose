@@ -1,0 +1,165 @@
+# GolangCI-Lint v2 Configuration for gogpu/compose
+# Documentation: https://golangci-lint.run/docs/configuration/
+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    # Code quality and complexity
+    - gocyclo
+    - gocognit
+    - funlen
+    - maintidx
+    - cyclop
+    - nestif
+
+    # Bug detection
+    - govet
+    - staticcheck
+    - errcheck
+    - errorlint
+    - gosec
+    - nilnil
+    - nilerr
+    - ineffassign
+
+    # Code style and consistency
+    - misspell
+    - whitespace
+    - unconvert
+    - unparam
+
+    # Naming conventions
+    - errname
+    - revive
+
+    # Performance
+    - prealloc
+    - makezero
+
+    # Code practices
+    - goconst
+    - gocritic
+    - goprintffuncname
+    - nolintlint
+    - nakedret
+
+    # Additional quality checkers
+    - dupl
+    - dogsled
+    - durationcheck
+
+  settings:
+    govet:
+      enable:
+        - copylocks
+      disable:
+        - fieldalignment
+
+    gocyclo:
+      min-complexity: 20
+
+    cyclop:
+      max-complexity: 20
+
+    funlen:
+      lines: 120
+      statements: 60
+
+    gocognit:
+      min-complexity: 30
+
+    misspell:
+      locale: US
+
+    nestif:
+      min-complexity: 4
+
+    revive:
+      rules:
+        - name: var-naming
+        - name: error-return
+        - name: error-naming
+        - name: if-return
+        - name: increment-decrement
+        - name: var-declaration
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unreachable-code
+        - name: redefines-builtin-id
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+
+      disabled-checks:
+        - commentFormatting
+        - whyNoLint
+        - unnamedResult
+        - commentedOutCode
+        - octalLiteral
+        - paramTypeCombine
+
+      settings:
+        hugeParam:
+          sizeThreshold: 256
+
+  exclusions:
+    rules:
+      # Enum String() methods: the string literal IS the constant name, not a
+      # candidate for extraction. Standard Go stringer pattern (false positive).
+      - linters: [goconst]
+        source: 'return "'
+
+      # Test files - allow more flexibility
+      - path: _test\.go
+        linters:
+          - gocyclo
+          - cyclop
+          - funlen
+          - maintidx
+          - errcheck
+          - gosec
+          - goconst
+          - dogsled
+          - dupl
+          - gocognit
+
+      # Example code
+      - path: examples?/.*\.go
+        linters:
+          - errcheck
+          - errorlint
+          - funlen
+          - gocyclo
+          - cyclop
+          - gocognit
+          - revive
+          - gosec
+          - gocritic
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+
+output:
+  sort-order:
+    - file

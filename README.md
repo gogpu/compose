@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/gogpu/.github/main/assets/logo.png">
     <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/gogpu/.github/main/assets/logo.png">
-    <img src="https://raw.githubusercontent.com/gogpu/.github/main/assets/logo.png" alt="GoGPU Logo" width="60" />
+    <img src="https://raw.githubusercontent.com/gogpu/.github/main/assets/logo.png" alt="GoGPU Logo" width="100" />
   </picture>
 </p>
 
@@ -16,14 +16,21 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/gogpu/compose/actions/workflows/ci.yml"><img src="https://github.com/gogpu/compose/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://app.codecov.io/gh/gogpu/compose/branch/main"><img src="https://codecov.io/gh/gogpu/compose/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://pkg.go.dev/github.com/gogpu/compose"><img src="https://pkg.go.dev/badge/github.com/gogpu/compose.svg" alt="Go Reference"></a>
   <a href="https://goreportcard.com/report/github.com/gogpu/compose"><img src="https://goreportcard.com/badge/github.com/gogpu/compose" alt="Go Report Card"></a>
   <a href="https://github.com/gogpu/compose/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License"></a>
   <a href="https://github.com/gogpu/compose"><img src="https://img.shields.io/badge/Pure_Go-Zero_CGO-brightgreen" alt="Zero CGO"></a>
-  <a href="https://github.com/gogpu/compose"><img src="https://img.shields.io/badge/Status-Design_Phase-orange" alt="Status"></a>
 </p>
 
 ---
+
+## Installation
+
+```bash
+go get github.com/gogpu/compose
+```
 
 ## What is compose?
 
@@ -75,7 +82,7 @@ srv.OnFrame(func(f compose.Frame) {
 })
 ```
 
-> **Status: design phase.** APIs above are aspirational — they show the intended shape of the library. See the [Roadmap](#roadmap) section for current progress.
+> Unix socket transport, wire protocol v1, LZ4 compression, pull-based flow control. See the [Roadmap](#roadmap) for current progress.
 
 ## Why a separate library?
 
@@ -184,14 +191,12 @@ The protocol is the stable compatibility surface of compose. Versioning is indep
 
 | Phase | Features | Status |
 |-------|----------|--------|
-| **Phase 0** | Design, ADRs, reference example sketch | Design phase |
-| **Phase 1** | Reference example: compositor + clock module + notification module | Planned |
-| **Phase 2** | Wire protocol v1, framing, header, dirty rects | Planned |
-| **Phase 3** | Unix socket transport, hot-plug, connection management | Planned |
-| **Phase 4** | Shared memory ring buffer transport | Planned |
-| **Phase 5** | Extract stable APIs from the reference example into this library | Planned |
-| **Phase 6** | Multi-screen layout, layered z-order, fade transitions | Future |
-| **Phase 7** | Cross-language module SDK (C header, Rust crate, Python) | Future |
+| **Phase 1** | Wire protocol v1, Unix socket transport, LZ4 compression, public API | Complete |
+| **Phase 2** | Reference examples: compositor + clock + notification (multi-process) | Next |
+| **Phase 3** | Shared memory ring buffer transport (zero-copy) | Planned |
+| **Phase 4** | Delta frames, compression negotiation | Planned |
+| **Phase 5** | Multi-screen layout, layered z-order, fade transitions | Future |
+| **Phase 6** | Cross-language module SDK (C header, Rust crate, Python) | Future |
 
 ## Design principles
 
@@ -215,11 +220,11 @@ The design of `compose` is informed by:
 
 ## Status and contributing
 
-The `compose` library is in the **design phase**. There is no shippable code yet. This repository exists to host the design discussion, the architecture decision records, and (once they exist) the reference example and the extracted library.
+The `compose` library ships a working Unix socket transport with wire protocol v1, LZ4 compression, pull-based flow control, and hot-plug module lifecycle.
 
-The first user is a [Go rewrite of MagicMirror²](https://github.com/gogpu/ui/issues/75) targeting Raspberry Pi and (eventually) Redox OS.
+Known users: [KiGo](https://github.com/AgentNemo00/kigo) (modular Go application using offscreen rendering + multi-process composition).
 
-If you have a use case for multi-process composition in Go and want to influence the design before APIs freeze, please join the [compose RFC discussion](https://github.com/orgs/gogpu/discussions/177) or open an issue describing your scenario. For the related (but distinct) question of in-process multi-window support in `gogpu` itself, see the [multi-window RFC discussion](https://github.com/orgs/gogpu/discussions/167). Real use cases drive both — we deliberately avoid designing against hypotheticals.
+If you have a use case for multi-process composition in Go, please join the [compose RFC discussion](https://github.com/orgs/gogpu/discussions/177) or open an issue describing your scenario.
 
 ## Part of the GoGPU Ecosystem
 

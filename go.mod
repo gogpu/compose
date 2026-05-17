@@ -1,3 +1,5 @@
 module github.com/gogpu/compose
 
 go 1.25
+
+require github.com/pierrec/lz4/v4 v4.1.26
