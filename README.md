@@ -163,27 +163,30 @@ Pixels travel through one of two transports, chosen per module:
 
 The library deliberately avoids Linux-specific kernel APIs (`io_uring`, `eventfd`, Linux-specific shm segments) so the design ports cleanly across all desktop OSes. Where POSIX and Windows diverge — fd passing for shared memory is `SCM_RIGHTS` on POSIX and named handles on Windows — a thin Go interface with build tags hides the difference from module authors.
 
-## Wire protocol
+## Wire protocol v1
 
-Frame header (planned, may evolve during design phase):
+64-byte fixed header, little-endian, cache-line aligned:
 
-```
-+----+----+----+----+----+----+----+----+
-| magic              | version          |
-+----+----+----+----+----+----+----+----+
-| module ID (uint64)                    |
-+----+----+----+----+----+----+----+----+
-| timestamp (int64, monotonic ns)       |
-+----+----+----+----+----+----+----+----+
-| x | y | width | height (4 x uint32)   |
-+----+----+----+----+----+----+----+----+
-| dirty rect (x,y,w,h, 4 x uint32)      |
-+----+----+----+----+----+----+----+----+
-| pixel format (uint8) | flags (uint8)  |
-+----+----+----+----+----+----+----+----+
-| pixels (RGBA premultiplied) ...       |
-+----+----+----+----+----+----+----+----+
-```
+| Offset | Field | Size | Description |
+|--------|-------|------|-------------|
+| 0 | Magic | 4B | `0x434F4D50` ("COMP") |
+| 4 | Version | 2B | Protocol version |
+| 6 | MsgType | 1B | Frame, Handshake, Ack, FrameRequest, Resize, Disconnect |
+| 7 | Flags | 1B | DirtyValid, Compressed, Keyframe |
+| 8 | ModuleID | 8B | Compositor-assigned |
+| 16 | Sequence | 8B | Monotonic frame counter |
+| 24 | Timestamp | 8B | Monotonic nanoseconds |
+| 32 | Width | 2B | Frame width |
+| 34 | Height | 2B | Frame height |
+| 36 | Stride | 4B | Bytes per row |
+| 40 | DirtyRect | 8B | x, y, w, h (2B each) |
+| 48 | PixelFormat | 1B | RGBA8, BGRA8 |
+| 49 | Compression | 1B | None, LZ4, Zstd |
+| 50 | Reserved | 6B | Future use |
+| 56 | PayloadSize | 4B | Compressed payload bytes |
+| 60 | UncompressedSize | 4B | Original pixel bytes |
+
+Followed by `PayloadSize` bytes of pixel data (RGBA premultiplied, optionally LZ4-compressed).
 
 The protocol is the stable compatibility surface of compose. Versioning is independent from the rest of the gogpu ecosystem so that protocol changes do not force a UI framework release.
 
