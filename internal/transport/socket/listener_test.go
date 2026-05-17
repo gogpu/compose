@@ -11,11 +11,22 @@ import (
 	"github.com/gogpu/compose/internal/protocol"
 )
 
-// testSocketPath returns a temporary Unix socket path for testing.
+// testSocketPath returns a short temporary Unix socket path for testing.
+// macOS limits Unix socket paths to 104 bytes. t.TempDir() on macOS CI
+// produces paths like /var/folders/.../TestName.../test.sock which easily
+// exceeds this limit. We use os.CreateTemp with a short prefix under /tmp
+// (or %TEMP% on Windows) to guarantee a short path.
 func testSocketPath(t *testing.T) string {
 	t.Helper()
-	dir := t.TempDir()
-	return filepath.Join(dir, "test.sock")
+	f, err := os.CreateTemp("", "cs-*.sock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := f.Name()
+	f.Close()
+	os.Remove(path) // Remove the file; we need the path for the socket.
+	t.Cleanup(func() { os.Remove(path) })
+	return path
 }
 
 func TestListen_Accept_Close(t *testing.T) {
@@ -176,8 +187,9 @@ func TestListen_CloseWhileAcceptBlocking(t *testing.T) {
 		ch <- err
 	}()
 
-	// Give Accept time to block.
-	time.Sleep(50 * time.Millisecond)
+	// Give Accept time to block. On CI runners, goroutine scheduling
+	// can be slow, so 200ms gives ample headroom.
+	time.Sleep(200 * time.Millisecond)
 
 	// Close should unblock Accept.
 	if err := ln.Close(); err != nil {
@@ -189,7 +201,7 @@ func TestListen_CloseWhileAcceptBlocking(t *testing.T) {
 		if err == nil {
 			t.Error("Accept should return error after Close")
 		}
-	case <-time.After(2 * time.Second):
+	case <-time.After(5 * time.Second):
 		t.Fatal("Accept did not unblock after Close (timeout)")
 	}
 }

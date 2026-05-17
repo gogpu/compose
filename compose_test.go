@@ -4,7 +4,6 @@ import (
 	"errors"
 	"image"
 	"os"
-	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -13,12 +12,22 @@ import (
 	"github.com/gogpu/compose/internal/protocol"
 )
 
-// tempSocket returns a unique temporary Unix socket path.
-// On Windows, uses a path under the temp directory.
+// tempSocket returns a short temporary Unix socket path.
+// macOS limits Unix socket paths to 104 bytes. t.TempDir() on macOS CI
+// produces paths like /var/folders/.../TestName.../compose.sock which
+// easily exceeds this limit. We use os.CreateTemp with a short prefix
+// to guarantee a short path under /tmp (or %TEMP% on Windows).
 func tempSocket(t *testing.T) string {
 	t.Helper()
-	dir := t.TempDir()
-	return filepath.Join(dir, "compose-test.sock")
+	f, err := os.CreateTemp("", "cs-*.sock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := f.Name()
+	f.Close()
+	os.Remove(path) // Remove the file; we need the path for the socket.
+	t.Cleanup(func() { os.Remove(path) })
+	return path
 }
 
 // makePixels creates a simple RGBA pixel buffer of the given dimensions
@@ -31,16 +40,18 @@ func makePixels(w, h uint32, fill byte) []byte {
 	return pixels
 }
 
-// waitFor polls a condition function until it returns true or 2 seconds elapse.
-// Returns true if the condition was met.
+// waitFor polls a condition function until it returns true or 5 seconds elapse.
+// Returns true if the condition was met. The generous timeout accommodates slow
+// CI runners (macOS shared, Ubuntu containers) where goroutine scheduling may
+// introduce significant delays.
 func waitFor(t *testing.T, condition func() bool) bool {
 	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
+	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		if condition() {
 			return true
 		}
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 	return false
 }
@@ -314,8 +325,9 @@ func TestOnDisconnectCallback(t *testing.T) {
 		t.Fatalf("Dial: %v", err)
 	}
 
-	// Wait a moment for the server to process the connection.
-	time.Sleep(50 * time.Millisecond)
+	// Wait for the server to fully process the connection. On CI runners,
+	// goroutine scheduling can be slow, so 200ms gives ample headroom.
+	time.Sleep(200 * time.Millisecond)
 
 	// Close the client — this triggers disconnect.
 	if err := client.Close(); err != nil {
@@ -514,8 +526,9 @@ func TestWithMaxModulesLimit(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = c1.Close() })
 
-	// Wait for first client to be registered.
-	time.Sleep(50 * time.Millisecond)
+	// Wait for the first client to be fully registered on the server.
+	// On CI runners, goroutine scheduling can be slow.
+	time.Sleep(200 * time.Millisecond)
 
 	// Second client should be rejected.
 	_, err = Dial(addr, WithName("second"))
