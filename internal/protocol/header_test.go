@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"errors"
 	"math"
 	"testing"
 )
@@ -33,7 +34,7 @@ func TestHeader_RoundTrip(t *testing.T) {
 				DirtyY:           200,
 				DirtyW:           300,
 				DirtyH:           400,
-				PixelFormat:       PixelRGBA8,
+				PixelFormat:      PixelRGBA8,
 				Compression:      CompressionNone,
 				PayloadSize:      1920 * 1080 * 4,
 				UncompressedSize: 1920 * 1080 * 4,
@@ -52,7 +53,7 @@ func TestHeader_RoundTrip(t *testing.T) {
 				Width:            800,
 				Height:           600,
 				Stride:           800 * 4,
-				PixelFormat:       PixelBGRA8,
+				PixelFormat:      PixelBGRA8,
 				Compression:      CompressionLZ4,
 				PayloadSize:      100000,
 				UncompressedSize: 800 * 600 * 4,
@@ -113,7 +114,7 @@ func TestHeader_RoundTrip(t *testing.T) {
 				DirtyY:           math.MaxUint16,
 				DirtyW:           math.MaxUint16,
 				DirtyH:           math.MaxUint16,
-				PixelFormat:       PixelFormat(0xFF),
+				PixelFormat:      PixelFormat(0xFF),
 				Compression:      Compression(0xFF),
 				PayloadSize:      math.MaxUint32,
 				UncompressedSize: math.MaxUint32,
@@ -170,7 +171,7 @@ func TestEncode_BufferTooSmall(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := make([]byte, tt.size)
 			err := Encode(&h, buf)
-			if err != ErrBufferTooSmall {
+			if !errors.Is(err, ErrBufferTooSmall) {
 				t.Errorf("Encode() with %d-byte buf: got error %v, want ErrBufferTooSmall", tt.size, err)
 			}
 		})
@@ -191,7 +192,7 @@ func TestDecode_BufferTooSmall(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := make([]byte, tt.size)
 			_, err := Decode(buf)
-			if err != ErrBufferTooSmall {
+			if !errors.Is(err, ErrBufferTooSmall) {
 				t.Errorf("Decode() with %d-byte buf: got error %v, want ErrBufferTooSmall", tt.size, err)
 			}
 		})
@@ -352,7 +353,7 @@ func BenchmarkHeaderEncode(b *testing.B) {
 		DirtyY:           200,
 		DirtyW:           300,
 		DirtyH:           400,
-		PixelFormat:       PixelRGBA8,
+		PixelFormat:      PixelRGBA8,
 		Compression:      CompressionLZ4,
 		PayloadSize:      100000,
 		UncompressedSize: 1920 * 1080 * 4,
@@ -382,7 +383,7 @@ func BenchmarkHeaderDecode(b *testing.B) {
 		DirtyY:           200,
 		DirtyW:           300,
 		DirtyH:           400,
-		PixelFormat:       PixelRGBA8,
+		PixelFormat:      PixelRGBA8,
 		Compression:      CompressionLZ4,
 		PayloadSize:      100000,
 		UncompressedSize: 1920 * 1080 * 4,

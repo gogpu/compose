@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"errors"
 	"math"
 	"strings"
 	"testing"
@@ -178,7 +179,7 @@ func TestEncodeHello_BufferTooSmall(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := make([]byte, tt.size)
 			err := EncodeHello(&msg, buf)
-			if err != ErrHandshakeBufTooSmall {
+			if !errors.Is(err, ErrHandshakeBufTooSmall) {
 				t.Errorf("EncodeHello() with %d-byte buf: got error %v, want ErrHandshakeBufTooSmall", tt.size, err)
 			}
 		})
@@ -198,7 +199,7 @@ func TestDecodeHello_BufferTooSmall(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := make([]byte, tt.size)
 			_, err := DecodeHello(buf)
-			if err != ErrHandshakeBufTooSmall {
+			if !errors.Is(err, ErrHandshakeBufTooSmall) {
 				t.Errorf("DecodeHello() with %d-byte buf: got error %v, want ErrHandshakeBufTooSmall", tt.size, err)
 			}
 		})
@@ -219,7 +220,7 @@ func TestEncodeWelcome_BufferTooSmall(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := make([]byte, tt.size)
 			err := EncodeWelcome(&msg, buf)
-			if err != ErrHandshakeBufTooSmall {
+			if !errors.Is(err, ErrHandshakeBufTooSmall) {
 				t.Errorf("EncodeWelcome() with %d-byte buf: got error %v, want ErrHandshakeBufTooSmall", tt.size, err)
 			}
 		})
@@ -239,7 +240,7 @@ func TestDecodeWelcome_BufferTooSmall(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := make([]byte, tt.size)
 			_, err := DecodeWelcome(buf)
-			if err != ErrHandshakeBufTooSmall {
+			if !errors.Is(err, ErrHandshakeBufTooSmall) {
 				t.Errorf("DecodeWelcome() with %d-byte buf: got error %v, want ErrHandshakeBufTooSmall", tt.size, err)
 			}
 		})

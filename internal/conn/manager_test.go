@@ -1,6 +1,7 @@
 package conn
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -80,7 +81,7 @@ func TestManager_HandleConnect(t *testing.T) {
 		_, _ = m.HandleConnect("b", 100, 100, 30)
 
 		_, err := m.HandleConnect("c", 100, 100, 30)
-		if err != ErrMaxModules {
+		if !errors.Is(err, ErrMaxModules) {
 			t.Errorf("err = %v, want ErrMaxModules", err)
 		}
 	})
@@ -90,7 +91,7 @@ func TestManager_HandleConnect(t *testing.T) {
 		_, _ = m.HandleConnect("clock", 400, 120, 1)
 
 		_, err := m.HandleConnect("clock", 400, 120, 1)
-		if err != ErrNameTaken {
+		if !errors.Is(err, ErrNameTaken) {
 			t.Errorf("err = %v, want ErrNameTaken", err)
 		}
 	})
@@ -218,7 +219,7 @@ func TestManager_Reconnection(t *testing.T) {
 
 		// At capacity.
 		_, err := m.HandleConnect("c", 100, 100, 30)
-		if err != ErrMaxModules {
+		if !errors.Is(err, ErrMaxModules) {
 			t.Fatalf("expected ErrMaxModules, got %v", err)
 		}
 

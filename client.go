@@ -3,6 +3,7 @@ package compose
 import (
 	"fmt"
 	"image"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -11,6 +12,21 @@ import (
 	"github.com/gogpu/compose/internal/protocol"
 	"github.com/gogpu/compose/internal/transport/socket"
 )
+
+// saturateUint16 converts v to uint16, clamping to math.MaxUint16 on overflow.
+func saturateUint16(v int) uint16 {
+	return uint16(min(max(v, 0), math.MaxUint16)) //nolint:gosec // clamped to [0, MaxUint16]
+}
+
+// saturateUint16from32 converts v to uint16, clamping to math.MaxUint16 on overflow.
+func saturateUint16from32(v uint32) uint16 {
+	return uint16(min(v, math.MaxUint16)) //nolint:gosec // clamped to [0, MaxUint16]
+}
+
+// saturateUint32 converts v to uint32, clamping to math.MaxUint32 on overflow.
+func saturateUint32(v int) uint32 {
+	return uint32(min(max(v, 0), math.MaxUint32)) //nolint:gosec // clamped to [0, MaxUint32]
+}
 
 // Client is the module-side endpoint that connects to a compositor and
 // publishes frames. All methods are safe for concurrent use.
@@ -57,8 +73,8 @@ func Dial(addr string, opts ...ClientOption) (*Client, error) {
 	hello := &protocol.HelloMsg{
 		Magic:        protocol.Magic,
 		Version:      protocol.ProtocolVersion,
-		Width:        uint16(cfg.width),
-		Height:       uint16(cfg.height),
+		Width:        saturateUint16from32(cfg.width),
+		Height:       saturateUint16from32(cfg.height),
 		PreferredFPS: cfg.fps,
 		Transport:    protocol.TransportSocket,
 	}
@@ -107,7 +123,7 @@ func (c *Client) PublishFrame(f Frame) error {
 
 	seq := c.seq.Add(1)
 	pixels := f.Pixels
-	uncompressedSize := uint32(len(pixels))
+	uncompressedSize := saturateUint32(len(pixels))
 
 	// Compress if codec is not raw.
 	var flags protocol.Flag
@@ -140,21 +156,21 @@ func (c *Client) PublishFrame(f Frame) error {
 		ModuleID:         c.moduleID,
 		Sequence:         seq,
 		TimestampNs:      f.Timestamp,
-		Width:            uint16(f.Width),
-		Height:           uint16(f.Height),
+		Width:            saturateUint16from32(f.Width),
+		Height:           saturateUint16from32(f.Height),
 		Stride:           f.Width * 4,
 		PixelFormat:      protocol.PixelRGBA8,
 		Compression:      compressionID,
-		PayloadSize:      uint32(len(pixels)),
+		PayloadSize:      saturateUint32(len(pixels)),
 		UncompressedSize: uncompressedSize,
 	}
 
 	// Set dirty rect fields if valid.
 	if flags.Has(protocol.FlagDirtyValid) {
-		hdr.DirtyX = uint16(f.DirtyRect.Min.X)
-		hdr.DirtyY = uint16(f.DirtyRect.Min.Y)
-		hdr.DirtyW = uint16(f.DirtyRect.Dx())
-		hdr.DirtyH = uint16(f.DirtyRect.Dy())
+		hdr.DirtyX = saturateUint16(f.DirtyRect.Min.X)
+		hdr.DirtyY = saturateUint16(f.DirtyRect.Min.Y)
+		hdr.DirtyW = saturateUint16(f.DirtyRect.Dx())
+		hdr.DirtyH = saturateUint16(f.DirtyRect.Dy())
 	}
 
 	// Use monotonic timestamp if caller did not set one.
@@ -277,21 +293,21 @@ func frameToHeader(f Frame, moduleID uint64, seq uint64, c codec.Codec) protocol
 		ModuleID:         moduleID,
 		Sequence:         seq,
 		TimestampNs:      f.Timestamp,
-		Width:            uint16(f.Width),
-		Height:           uint16(f.Height),
+		Width:            saturateUint16from32(f.Width),
+		Height:           saturateUint16from32(f.Height),
 		Stride:           f.Width * 4,
 		PixelFormat:      protocol.PixelRGBA8,
 		Compression:      protocol.Compression(c.ID()),
-		PayloadSize:      uint32(len(f.Pixels)),
-		UncompressedSize: uint32(len(f.Pixels)),
+		PayloadSize:      saturateUint32(len(f.Pixels)),
+		UncompressedSize: saturateUint32(len(f.Pixels)),
 	}
 
 	if flags.Has(protocol.FlagDirtyValid) {
 		dr := f.DirtyRect.Canon()
-		hdr.DirtyX = uint16(dr.Min.X)
-		hdr.DirtyY = uint16(dr.Min.Y)
-		hdr.DirtyW = uint16(dr.Dx())
-		hdr.DirtyH = uint16(dr.Dy())
+		hdr.DirtyX = saturateUint16(dr.Min.X)
+		hdr.DirtyY = saturateUint16(dr.Min.Y)
+		hdr.DirtyW = saturateUint16(dr.Dx())
+		hdr.DirtyH = saturateUint16(dr.Dy())
 	}
 
 	return hdr

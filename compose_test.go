@@ -1,6 +1,7 @@
 package compose
 
 import (
+	"errors"
 	"image"
 	"os"
 	"path/filepath"
@@ -30,11 +31,11 @@ func makePixels(w, h uint32, fill byte) []byte {
 	return pixels
 }
 
-// waitFor polls a condition function until it returns true or the timeout
-// expires. Returns true if the condition was met.
-func waitFor(t *testing.T, timeout time.Duration, condition func() bool) bool {
+// waitFor polls a condition function until it returns true or 2 seconds elapse.
+// Returns true if the condition was met.
+func waitFor(t *testing.T, condition func() bool) bool {
 	t.Helper()
-	deadline := time.Now().Add(timeout)
+	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		if condition() {
 			return true
@@ -100,7 +101,7 @@ func TestFrameRoundTrip(t *testing.T) {
 	}
 
 	// Wait for frame to arrive.
-	ok := waitFor(t, 2*time.Second, func() bool {
+	ok := waitFor(t, func() bool {
 		return received.Load() != nil
 	})
 	if !ok {
@@ -170,7 +171,7 @@ func TestFrameWithDirtyRect(t *testing.T) {
 		t.Fatalf("PublishFrame: %v", err)
 	}
 
-	ok := waitFor(t, 2*time.Second, func() bool {
+	ok := waitFor(t, func() bool {
 		return received.Load() != nil
 	})
 	if !ok {
@@ -228,7 +229,7 @@ func TestMultipleClients(t *testing.T) {
 	}
 
 	// Wait for all three frames.
-	ok := waitFor(t, 2*time.Second, func() bool {
+	ok := waitFor(t, func() bool {
 		mu.Lock()
 		n := len(framesByModule)
 		mu.Unlock()
@@ -276,7 +277,7 @@ func TestOnConnectCallback(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = client.Close() })
 
-	ok := waitFor(t, 2*time.Second, func() bool {
+	ok := waitFor(t, func() bool {
 		return connectedName.Load() != nil
 	})
 	if !ok {
@@ -321,7 +322,7 @@ func TestOnDisconnectCallback(t *testing.T) {
 		t.Fatalf("client.Close: %v", err)
 	}
 
-	ok := waitFor(t, 2*time.Second, func() bool {
+	ok := waitFor(t, func() bool {
 		return disconnectedName.Load() != nil
 	})
 	if !ok {
@@ -356,12 +357,12 @@ func TestServerClose(t *testing.T) {
 	}
 
 	// Double close should return ErrClosed.
-	if err := srv.Close(); err != ErrClosed {
+	if err := srv.Close(); !errors.Is(err, ErrClosed) {
 		t.Errorf("second Close = %v, want ErrClosed", err)
 	}
 
 	// RequestFrame after close should return ErrClosed.
-	if err := srv.RequestFrame(1); err != ErrClosed {
+	if err := srv.RequestFrame(1); !errors.Is(err, ErrClosed) {
 		t.Errorf("RequestFrame after close = %v, want ErrClosed", err)
 	}
 
@@ -389,7 +390,7 @@ func TestClientDoubleClose(t *testing.T) {
 		t.Fatalf("first Close: %v", err)
 	}
 
-	if err := client.Close(); err != ErrClosed {
+	if err := client.Close(); !errors.Is(err, ErrClosed) {
 		t.Errorf("second Close = %v, want ErrClosed", err)
 	}
 }
@@ -417,7 +418,7 @@ func TestPublishAfterClose(t *testing.T) {
 		Width:  1,
 		Height: 1,
 	})
-	if err != ErrClosed {
+	if !errors.Is(err, ErrClosed) {
 		t.Errorf("PublishFrame after close = %v, want ErrClosed", err)
 	}
 }
@@ -450,7 +451,7 @@ func TestRequestFrameTrigger(t *testing.T) {
 	})
 
 	// Wait for connection to be fully established.
-	ok := waitFor(t, 2*time.Second, func() bool {
+	ok := waitFor(t, func() bool {
 		return moduleID.Load() != 0
 	})
 	if !ok {
@@ -464,7 +465,7 @@ func TestRequestFrameTrigger(t *testing.T) {
 		t.Fatalf("RequestFrame: %v", err)
 	}
 
-	ok = waitFor(t, 2*time.Second, func() bool {
+	ok = waitFor(t, func() bool {
 		return requestCount.Load() >= 1
 	})
 	if !ok {
@@ -485,7 +486,7 @@ func TestRequestFrameUnknownModule(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = srv.Close() })
 
-	if err := srv.RequestFrame(999); err != ErrModuleNotFound {
+	if err := srv.RequestFrame(999); !errors.Is(err, ErrModuleNotFound) {
 		t.Errorf("RequestFrame(999) = %v, want ErrModuleNotFound", err)
 	}
 }
@@ -704,8 +705,8 @@ func TestFrameToHeader(t *testing.T) {
 
 func TestSentinelErrors(t *testing.T) {
 	// Verify sentinel errors are distinct and not nil.
-	errors := []error{ErrClosed, ErrNotAccepted, ErrModuleNotFound, ErrMaxModules, ErrNameTaken}
-	for i, e := range errors {
+	sentinels := []error{ErrClosed, ErrNotAccepted, ErrModuleNotFound, ErrMaxModules, ErrNameTaken}
+	for i, e := range sentinels {
 		if e == nil {
 			t.Errorf("sentinel error %d is nil", i)
 		}

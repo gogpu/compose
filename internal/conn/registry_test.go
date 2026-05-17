@@ -1,6 +1,7 @@
 package conn
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -22,7 +23,7 @@ func TestNewRegistry(t *testing.T) {
 			t.Fatalf("first register failed: %v", err)
 		}
 		_, err = r.Register("b", 100, 100, 30)
-		if err != ErrMaxModules {
+		if !errors.Is(err, ErrMaxModules) {
 			t.Errorf("second register err = %v, want ErrMaxModules", err)
 		}
 	})
@@ -34,7 +35,7 @@ func TestNewRegistry(t *testing.T) {
 			t.Fatalf("first register failed: %v", err)
 		}
 		_, err = r.Register("b", 100, 100, 30)
-		if err != ErrMaxModules {
+		if !errors.Is(err, ErrMaxModules) {
 			t.Errorf("second register err = %v, want ErrMaxModules", err)
 		}
 	})
@@ -87,7 +88,7 @@ func TestRegistry_Register(t *testing.T) {
 		}
 
 		_, err := r.Register("overflow", 100, 100, 30)
-		if err != ErrMaxModules {
+		if !errors.Is(err, ErrMaxModules) {
 			t.Errorf("overflow err = %v, want ErrMaxModules", err)
 		}
 	})
@@ -100,7 +101,7 @@ func TestRegistry_Register(t *testing.T) {
 		}
 
 		_, err = r.Register("clock", 400, 120, 1)
-		if err != ErrNameTaken {
+		if !errors.Is(err, ErrNameTaken) {
 			t.Errorf("duplicate name err = %v, want ErrNameTaken", err)
 		}
 	})
@@ -186,7 +187,7 @@ func TestRegistry_Unregister(t *testing.T) {
 
 		// At capacity.
 		_, err := r.Register("c", 100, 100, 30)
-		if err != ErrMaxModules {
+		if !errors.Is(err, ErrMaxModules) {
 			t.Fatalf("expected ErrMaxModules, got %v", err)
 		}
 

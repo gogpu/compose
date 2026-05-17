@@ -143,7 +143,7 @@ func Encode(h *Header, buf []byte) error {
 	binary.LittleEndian.PutUint64(buf[offSequence:], h.Sequence)
 
 	// TimestampNs (8 bytes, signed as uint64 bit pattern)
-	binary.LittleEndian.PutUint64(buf[offTimestampNs:], uint64(h.TimestampNs))
+	binary.LittleEndian.PutUint64(buf[offTimestampNs:], uint64(h.TimestampNs)) //nolint:gosec // bit-cast int64→uint64, no overflow
 
 	// Width (2 bytes)
 	binary.LittleEndian.PutUint16(buf[offWidth:], h.Width)
@@ -228,7 +228,7 @@ func Decode(buf []byte) (Header, error) {
 	h.Sequence = binary.LittleEndian.Uint64(buf[offSequence:])
 
 	// TimestampNs (8 bytes)
-	h.TimestampNs = int64(binary.LittleEndian.Uint64(buf[offTimestampNs:]))
+	h.TimestampNs = int64(binary.LittleEndian.Uint64(buf[offTimestampNs:])) //nolint:gosec // bit-cast uint64→int64, no overflow
 
 	// Width (2 bytes)
 	h.Width = binary.LittleEndian.Uint16(buf[offWidth:])

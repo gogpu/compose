@@ -48,7 +48,7 @@ func TestDial_Success(t *testing.T) {
 	if r.err != nil {
 		t.Fatalf("Accept: %v", r.err)
 	}
-	defer r.conn.Close()
+	t.Cleanup(func() { _ = r.conn.Close() })
 }
 
 func TestDial_Timeout(t *testing.T) {

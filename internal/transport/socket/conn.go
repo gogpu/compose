@@ -16,8 +16,8 @@ const bufferSize = 256 * 1024
 
 // Conn wraps a net.Conn with framed header+payload read/write.
 // Concurrent reads and writes are safe (separate locks).
-// Concurrent reads from multiple goroutines are serialised by readMu.
-// Concurrent writes from multiple goroutines are serialised by writeMu.
+// Concurrent reads from multiple goroutines are serialized by readMu.
+// Concurrent writes from multiple goroutines are serialized by writeMu.
 type Conn struct {
 	raw     net.Conn
 	reader  *bufio.Reader

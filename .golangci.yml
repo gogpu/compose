@@ -118,6 +118,11 @@ linters:
 
   exclusions:
     rules:
+      # Enum String() methods: the string literal IS the constant name, not a
+      # candidate for extraction. Standard Go stringer pattern (false positive).
+      - linters: [goconst]
+        source: 'return "'
+
       # Test files - allow more flexibility
       - path: _test\.go
         linters:

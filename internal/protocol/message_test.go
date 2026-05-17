@@ -59,13 +59,13 @@ func TestMsgType_Valid(t *testing.T) {
 func TestFlag_Operations(t *testing.T) {
 	t.Run("Has", func(t *testing.T) {
 		flags := FlagDirtyValid | FlagKeyframe
-		if !Flag(flags).Has(FlagDirtyValid) {
+		if !flags.Has(FlagDirtyValid) {
 			t.Error("expected FlagDirtyValid to be set")
 		}
-		if !Flag(flags).Has(FlagKeyframe) {
+		if !flags.Has(FlagKeyframe) {
 			t.Error("expected FlagKeyframe to be set")
 		}
-		if Flag(flags).Has(FlagCompressed) {
+		if flags.Has(FlagCompressed) {
 			t.Error("expected FlagCompressed to not be set")
 		}
 	})
