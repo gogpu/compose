@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/gogpu/.github/main/assets/logo.png">
     <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/gogpu/.github/main/assets/logo.png">
-    <img src="https://raw.githubusercontent.com/gogpu/.github/main/assets/logo.png" alt="GoGPU Logo" width="60" />
+    <img src="https://raw.githubusercontent.com/gogpu/.github/main/assets/logo.png" alt="GoGPU Logo" width="100" />
   </picture>
 </p>
 
@@ -16,14 +16,21 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/gogpu/compose/actions/workflows/ci.yml"><img src="https://github.com/gogpu/compose/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://app.codecov.io/gh/gogpu/compose/branch/main"><img src="https://codecov.io/gh/gogpu/compose/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://pkg.go.dev/github.com/gogpu/compose"><img src="https://pkg.go.dev/badge/github.com/gogpu/compose.svg" alt="Go Reference"></a>
   <a href="https://goreportcard.com/report/github.com/gogpu/compose"><img src="https://goreportcard.com/badge/github.com/gogpu/compose" alt="Go Report Card"></a>
   <a href="https://github.com/gogpu/compose/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License"></a>
   <a href="https://github.com/gogpu/compose"><img src="https://img.shields.io/badge/Pure_Go-Zero_CGO-brightgreen" alt="Zero CGO"></a>
-  <a href="https://github.com/gogpu/compose"><img src="https://img.shields.io/badge/Status-Design_Phase-orange" alt="Status"></a>
 </p>
 
 ---
+
+## Installation
+
+```bash
+go get github.com/gogpu/compose
+```
 
 ## What is compose?
 
