@@ -32,4 +32,10 @@ type Frame struct {
 
 	// Timestamp is a monotonic nanosecond timestamp from the module's clock.
 	Timestamp int64
+
+	// Sequence is the monotonically increasing frame counter assigned by
+	// the publishing client. It is carried from the wire protocol header
+	// and can be used for change detection (e.g., comparing against a
+	// previously seen sequence number in Snapshot).
+	Sequence uint64
 }
