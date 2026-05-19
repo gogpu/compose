@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-05-19
+
+### Added
+
+- **`Server.Snapshot()`** — returns latest frame from each connected module. Compositor render tick pattern (Android BufferQueue / Vulkan MAILBOX semantics). ADR-002.
+- **`Frame.Sequence`** — monotonic frame counter mapped from wire protocol header, for change detection.
+- **Per-module mailbox** — each module's latest frame stored server-side. Intermediate frames silently overwritten (latest-frame-wins). Push-based delivery officially supported.
+- **8 new tests** — push, pull, concurrent, backward compatibility, multiple modules, Snapshot.
+
 ## [0.1.0] — 2026-05-17
 
 ### Added
