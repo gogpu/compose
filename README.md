@@ -41,6 +41,7 @@ Each module is a separate OS binary that renders into an offscreen buffer using 
 This gives you:
 
 - **Process isolation** — a crash in one module never takes down the display
+- **Push and pull delivery** — modules push frames whenever data changes, or render on-demand via compositor request. Mailbox semantics: latest frame always wins (Android BufferQueue / Vulkan MAILBOX pattern)
 - **Hot-pluggable modules** — start, stop, replace, and update individual modules without restarting the compositor
 - **Cross-language modules** — anything that can write RGBA to a Unix socket can participate, not just Go
 - **Independent module lifecycles** — each module ships, releases, and updates on its own schedule
@@ -73,13 +74,19 @@ func main() {
 ```
 
 ```go
-// Compositor side: listen for module frames, place them onto a gogpu window
+// Compositor side: listen for module frames, composite on render tick
 srv, _ := compose.Listen("/tmp/compose.sock")
+
+// Option A: event-driven (callback fires on every frame receipt)
 srv.OnFrame(func(f compose.Frame) {
-    // 'layout' is your application's slot-assignment helper that
-    // decides where each module's pixels go on the screen.
     layout.Place(f.Name, f.Pixels)
 })
+
+// Option B: render-tick (sample latest frame from each module — mailbox semantics)
+frames := srv.Snapshot()
+for id, frame := range frames {
+    compositor.Blit(id, frame)
+}
 ```
 
 > Unix socket transport, wire protocol v1, LZ4 compression, pull-based flow control. See the [Roadmap](#roadmap) for current progress.

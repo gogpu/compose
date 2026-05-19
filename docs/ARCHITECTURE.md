@@ -96,14 +96,37 @@ client.PublishFrame(compose.Frame{ Pixels: rgba, Width: 400, Height: 120 })
 | 56 | PayloadSize | 4B | Compressed payload bytes |
 | 60 | UncompressedSize | 4B | Original pixel bytes |
 
-## Flow Control
+## Frame Delivery (ADR-002)
 
-Pull-based (Wayland frame callback pattern):
+Both push and pull delivery coexist. No mode negotiation — inferred from behavior (Chromium pattern).
 
-1. Compositor → Module: `FrameRequest`
+### Push (module-driven)
+
+Module calls `PublishFrame()` whenever data changes. Server stores in per-module mailbox (latest-frame-wins). Compositor samples via `Snapshot()`.
+
+```
+Module: data changes → PublishFrame() → socket → server mailbox (overwrites previous)
+Compositor: render tick → Snapshot() → latest frame from each module
+```
+
+### Pull (compositor-driven, Wayland pattern)
+
+1. Compositor → Module: `RequestFrame`
 2. Module renders → sends `Frame`
-3. Compositor processes → sends next `FrameRequest`
+3. Frame stored in mailbox + OnFrame fires
 4. Adaptive rate: 3 consecutive misses → halve request rate
+
+### Mailbox semantics (Android BufferQueue / Vulkan MAILBOX)
+
+Each module has one mailbox slot. When a module pushes faster than the compositor renders, intermediate frames are silently overwritten. The compositor always sees the latest frame. No stale frame accumulation, no FIFO backlog.
+
+```go
+// Compositor render tick:
+frames := srv.Snapshot()
+for id, frame := range frames {
+    compositor.Blit(id, frame)
+}
+```
 
 ## Connection Lifecycle
 
