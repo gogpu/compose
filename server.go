@@ -15,10 +15,43 @@ import (
 )
 
 // moduleConn tracks a per-module connection on the server side.
+// Each moduleConn contains a mailbox slot that stores the most recent frame
+// received from this module. The mailbox enables "latest frame wins" semantics
+// for compositors that poll via Server.Snapshot() instead of (or in addition to)
+// the OnFrame callback.
 type moduleConn struct {
 	conn     *socket.Conn
 	moduleID uint64
 	name     string
+
+	// latestMu guards access to the mailbox slot (latest and seq).
+	latestMu sync.Mutex
+
+	// latest holds the most recently received frame, or nil if no frame
+	// has been received yet. Overwritten on every receipt (latest wins).
+	latest *Frame
+
+	// seq is the wire protocol sequence number of the stored frame.
+	// Used for change detection by Snapshot consumers.
+	seq uint64
+}
+
+// storeLatest overwrites the mailbox with the given frame. Thread-safe.
+func (mc *moduleConn) storeLatest(f Frame) {
+	mc.latestMu.Lock()
+	mc.latest = &f
+	mc.seq = f.Sequence
+	mc.latestMu.Unlock()
+}
+
+// loadLatest returns the current mailbox frame (may be nil) and its sequence.
+// Thread-safe. Does not clear the mailbox — compositors may call Snapshot
+// multiple times and the frame stays until overwritten by a newer one.
+func (mc *moduleConn) loadLatest() *Frame {
+	mc.latestMu.Lock()
+	f := mc.latest
+	mc.latestMu.Unlock()
+	return f
 }
 
 // Server is the compositor-side endpoint that accepts module connections
@@ -182,6 +215,26 @@ func (s *Server) RequestFrame(moduleID uint64) error {
 	return nil
 }
 
+// Snapshot returns the latest frame from each connected module.
+// Returns nil entries for modules that haven't sent any frames yet.
+// The returned map is keyed by module ID.
+//
+// Snapshot does NOT clear the mailbox — the frame stays until overwritten
+// by a newer one from the same module. Compositors may call Snapshot
+// multiple times per render tick; each call returns the same frame until
+// the module publishes a new one. Use Frame.Sequence for change detection.
+//
+// Thread-safe. Designed to be called once per compositor render tick.
+func (s *Server) Snapshot() map[uint64]*Frame {
+	s.modulesMu.RLock()
+	result := make(map[uint64]*Frame, len(s.modules))
+	for id, mc := range s.modules {
+		result[id] = mc.loadLatest()
+	}
+	s.modulesMu.RUnlock()
+	return result
+}
+
 // Close shuts down the server, disconnects all modules, and releases
 // resources. After Close returns, no more callbacks will be invoked.
 func (s *Server) Close() error {
@@ -333,13 +386,16 @@ func (s *Server) readFrameLoop(mc *moduleConn) {
 		// Build Frame from header fields.
 		frame := headerToFrame(hdr, pixels, mc.name)
 
+		// Store in mailbox (latest-wins for Snapshot consumers).
+		mc.storeLatest(frame)
+
 		// Notify flow controller.
 		s.flow.FrameDelivered(mc.moduleID)
 
 		// Update registry last frame time.
 		s.manager.Registry().UpdateLastFrame(mc.moduleID, time.Now())
 
-		// Fire OnFrame callback.
+		// Fire OnFrame callback (backward compatible — fires on every receipt).
 		s.mu.RLock()
 		cb := s.onFrame
 		s.mu.RUnlock()
@@ -393,6 +449,7 @@ func headerToFrame(hdr protocol.Header, pixels []byte, name string) Frame {
 		Width:     uint32(hdr.Width),
 		Height:    uint32(hdr.Height),
 		Timestamp: hdr.TimestampNs,
+		Sequence:  hdr.Sequence,
 	}
 
 	if hdr.Flags.Has(protocol.FlagDirtyValid) {
