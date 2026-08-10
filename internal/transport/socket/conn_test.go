@@ -100,6 +100,35 @@ func TestWriteReadFrame_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestReadFrame_OversizedPayloadHeader(t *testing.T) {
+	client, server := net.Pipe()
+	defer client.Close()
+	defer server.Close()
+
+	hdr := makeHeader(protocol.MsgFrame, uint32(protocol.MaxPayloadSize+1))
+	var encoded [protocol.HeaderSize]byte
+	if err := protocol.Encode(&hdr, encoded[:]); err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+
+	writeErr := make(chan error, 1)
+	go func() {
+		_, err := client.Write(encoded[:])
+		writeErr <- err
+	}()
+
+	_, _, err := NewConn(server).ReadFrame()
+	if !errors.Is(err, ErrPayloadTooLarge) {
+		t.Fatalf("ReadFrame error = %v, want ErrPayloadTooLarge", err)
+	}
+
+	// The reader must reject the header before attempting to read the
+	// declared payload. A header-only peer therefore completes immediately.
+	if err := <-writeErr; err != nil {
+		t.Fatalf("header write: %v", err)
+	}
+}
+
 func TestWriteReadFrame_LargePayload(t *testing.T) {
 	client, server := newPipeConns(t)
 

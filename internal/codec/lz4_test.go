@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/rand"
 	"testing"
+
+	"github.com/gogpu/compose/internal/protocol"
 )
 
 func TestLZ4RoundTrip(t *testing.T) {
@@ -82,6 +84,21 @@ func TestLZ4EmptyInput(t *testing.T) {
 	}
 	if len(decoded) != 0 {
 		t.Errorf("Decode empty: len = %d, want 0", len(decoded))
+	}
+}
+
+func TestLZ4InitialDecodeSizeIsBounded(t *testing.T) {
+	for _, srcLen := range []int{
+		protocol.MaxPayloadSize/10 + 1,
+		int(^uint(0) >> 1),
+	} {
+		if got := initialDecodeSize(srcLen); got != protocol.MaxPayloadSize {
+			t.Errorf("initialDecodeSize(%d) = %d, want %d", srcLen, got, protocol.MaxPayloadSize)
+		}
+	}
+
+	if got := initialDecodeSize(1024); got != 10240 {
+		t.Errorf("initialDecodeSize(1024) = %d, want 10240", got)
 	}
 }
 

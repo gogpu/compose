@@ -10,6 +10,9 @@
 //   - Raw (ID 0x00): Pass-through copy, no compression.
 //   - LZ4 (ID 0x01): LZ4 block compression via github.com/pierrec/lz4/v4.
 //
+// LZ4's allocation fallback is bounded by protocol.MaxPayloadSize (64 MiB),
+// matching the transport and server decompression boundary.
+//
 // Registration happens automatically via init() in each codec's source file.
 // Use Get(id) to retrieve a codec by its protocol identifier.
 package codec

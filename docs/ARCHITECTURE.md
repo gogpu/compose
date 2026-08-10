@@ -96,6 +96,11 @@ client.PublishFrame(compose.Frame{ Pixels: rgba, Width: 400, Height: 120 })
 | 56 | PayloadSize | 4B | Compressed payload bytes |
 | 60 | UncompressedSize | 4B | Original pixel bytes |
 
+The wire fields remain `uint32` for protocol compatibility. The socket
+transport and decompression boundary enforce `protocol.MaxPayloadSize` (64
+MiB) before converting a declared size or allocating a payload buffer. Header
+decoding itself remains permissive and accepts the full `uint32` range.
+
 ## Frame Delivery (ADR-002)
 
 Both push and pull delivery coexist. No mode negotiation — inferred from behavior (Chromium pattern).
@@ -163,7 +168,7 @@ Module connects → Handshake (name, size, fps)
 ```
 compose (root) ──→ internal/protocol (leaf, no deps)
     ├──→ internal/transport/socket ──→ internal/protocol
-    ├──→ internal/codec (standalone)
+    ├──→ internal/codec ──→ internal/protocol
     ├──→ internal/flow (standalone)
     └──→ internal/conn (standalone)
 ```
