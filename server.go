@@ -435,10 +435,6 @@ func (s *Server) decodePayload(hdr protocol.Header, payload []byte) ([]byte, err
 	if len(payload) > 0 && hdr.UncompressedSize == 0 {
 		return nil, fmt.Errorf("compose: compressed payload has zero uncompressed size")
 	}
-	if len(payload) > protocol.MaxPayloadSize {
-		return nil, fmt.Errorf("compose: compressed payload size %d exceeds limit %d",
-			len(payload), protocol.MaxPayloadSize)
-	}
 
 	// Look up the codec by compression ID.
 	c := codec.Get(byte(hdr.Compression))

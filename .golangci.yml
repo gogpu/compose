@@ -161,5 +161,6 @@ issues:
   new: false
 
 output:
+  sort-results: true
   sort-order:
     - file

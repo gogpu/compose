@@ -125,15 +125,10 @@ func (c *lz4Codec) Decode(dst, src []byte) ([]byte, error) {
 // fallback without allowing len(src)*10 to overflow or exceed the shared
 // payload bound.
 func initialDecodeSize(srcLen int) int {
-	maxSize := maxDecodeSize(srcLen)
 	if srcLen > maxDecodeBuf/10 {
-		return maxSize
+		return maxDecodeSize(srcLen)
 	}
-	initial := srcLen * 10
-	if initial > maxSize {
-		return maxSize
-	}
-	return initial
+	return srcLen * 10
 }
 
 // maxDecodeSize returns the largest fallback destination permitted for a
