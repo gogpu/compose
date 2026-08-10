@@ -38,6 +38,13 @@ type lz4Codec struct {
 // the bound from the shared protocol allocation policy.
 const maxDecodeBuf = protocol.MaxPayloadSize
 
+// maxDecodeRatio bounds the nil-destination fallback for a compressed block.
+// LZ4's block format encodes matches with a 16-bit offset and bounded length
+// extensions, so a few hundred times expansion is the practical upper range.
+// Keeping the fallback proportional to the input also prevents tiny malformed
+// blocks from forcing the global 64 MiB ceiling.
+const maxDecodeRatio = 256
+
 // Encode compresses src using LZ4 block compression. Returns a sub-slice of
 // dst containing the compressed data. If dst is nil or too small, allocates a
 // new buffer.
@@ -94,15 +101,16 @@ func (c *lz4Codec) Decode(dst, src []byte) ([]byte, error) {
 	} else {
 		dst = dst[:cap(dst)]
 	}
+	maxSize := maxDecodeSize(len(src))
 
 	for {
 		n, err := lz4.UncompressBlock(src, dst)
 		if err != nil {
 			// If buffer might be too small, double and retry.
-			if len(dst) < maxDecodeBuf {
+			if len(dst) < maxSize {
 				next := len(dst) * 2
-				if next <= len(dst) || next > maxDecodeBuf {
-					next = maxDecodeBuf
+				if next <= len(dst) || next > maxSize {
+					next = maxSize
 				}
 				dst = make([]byte, next)
 				continue
@@ -117,10 +125,25 @@ func (c *lz4Codec) Decode(dst, src []byte) ([]byte, error) {
 // fallback without allowing len(src)*10 to overflow or exceed the shared
 // payload bound.
 func initialDecodeSize(srcLen int) int {
+	maxSize := maxDecodeSize(srcLen)
 	if srcLen > maxDecodeBuf/10 {
+		return maxSize
+	}
+	initial := srcLen * 10
+	if initial > maxSize {
+		return maxSize
+	}
+	return initial
+}
+
+// maxDecodeSize returns the largest fallback destination permitted for a
+// compressed block of srcLen bytes. It is overflow-safe and never exceeds the
+// shared protocol allocation bound.
+func maxDecodeSize(srcLen int) int {
+	if srcLen >= maxDecodeBuf/maxDecodeRatio {
 		return maxDecodeBuf
 	}
-	return srcLen * 10
+	return srcLen * maxDecodeRatio
 }
 
 // ID returns the LZ4 codec protocol identifier (0x01).

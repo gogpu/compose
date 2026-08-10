@@ -43,25 +43,12 @@ func TestDecodePayloadLZ4RoundTrip(t *testing.T) {
 	}
 }
 
-func TestDecodePayloadLZ4ZeroDeclaredSize(t *testing.T) {
-	src := bytes.Repeat([]byte{0x5A}, 4096)
-	c := codec.LZ4()
-	encoded, err := c.Encode(nil, src)
-	if err != nil {
-		t.Fatalf("Encode: %v", err)
-	}
-
-	// A zero declaration exercises the codec's nil-destination fallback. It
-	// remains valid for callers that do not know the decoded size in advance.
+func TestDecodePayloadRejectsZeroDeclaredSize(t *testing.T) {
 	hdr := protocol.Header{
 		Flags:       protocol.FlagCompressed,
 		Compression: protocol.CompressionLZ4,
 	}
-	decoded, err := (&Server{}).decodePayload(hdr, encoded)
-	if err != nil {
-		t.Fatalf("decodePayload with zero declared size: %v", err)
-	}
-	if !bytes.Equal(decoded, src) {
-		t.Fatalf("decoded payload differs: got %d bytes, want %d", len(decoded), len(src))
+	if _, err := (&Server{}).decodePayload(hdr, []byte{0xFF}); err == nil {
+		t.Fatal("decodePayload accepted a non-empty compressed payload with zero declared size")
 	}
 }

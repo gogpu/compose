@@ -102,6 +102,20 @@ func TestLZ4InitialDecodeSizeIsBounded(t *testing.T) {
 	}
 }
 
+func TestLZ4DecodeFallbackScalesWithInput(t *testing.T) {
+	if got := maxDecodeSize(1); got != maxDecodeRatio {
+		t.Errorf("maxDecodeSize(1) = %d, want %d", got, maxDecodeRatio)
+	}
+	if got := maxDecodeSize(maxDecodeBuf / maxDecodeRatio); got != maxDecodeBuf {
+		t.Errorf("maxDecodeSize(threshold) = %d, want %d", got, maxDecodeBuf)
+	}
+
+	// A malformed one-byte block must fail without walking the global cap.
+	if _, err := LZ4().Decode(nil, []byte{0xFF}); err == nil {
+		t.Fatal("Decode accepted malformed one-byte block")
+	}
+}
+
 func TestLZ4CompressionRatio(t *testing.T) {
 	c := LZ4()
 
