@@ -25,7 +25,13 @@ func saturateUint16from32(v uint32) uint16 {
 
 // saturateUint32 converts v to uint32, clamping to math.MaxUint32 on overflow.
 func saturateUint32(v int) uint32 {
-	return uint32(min(max(v, 0), math.MaxUint32)) //nolint:gosec // clamped to [0, MaxUint32]
+	if v <= 0 {
+		return 0
+	}
+	if uint64(v) > uint64(math.MaxUint32) {
+		return math.MaxUint32
+	}
+	return uint32(v) //nolint:gosec // checked to be in [0, MaxUint32]
 }
 
 // Client is the module-side endpoint that connects to a compositor and
