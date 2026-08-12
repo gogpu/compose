@@ -5,6 +5,8 @@ import (
 	"sync"
 
 	"github.com/pierrec/lz4/v4"
+
+	"github.com/gogpu/compose/internal/protocol"
 )
 
 func init() {
@@ -31,6 +33,17 @@ func LZ4() Codec {
 type lz4Codec struct {
 	pool sync.Pool
 }
+
+// maxDecodeBuf preserves the codec's existing internal name while sourcing
+// the bound from the shared protocol allocation policy.
+const maxDecodeBuf = protocol.MaxPayloadSize
+
+// maxDecodeRatio bounds the nil-destination fallback for a compressed block.
+// LZ4's block format encodes matches with a 16-bit offset and bounded length
+// extensions, so a few hundred times expansion is the practical upper range.
+// Keeping the fallback proportional to the input also prevents tiny malformed
+// blocks from forcing the global 64 MiB ceiling.
+const maxDecodeRatio = 256
 
 // Encode compresses src using LZ4 block compression. Returns a sub-slice of
 // dst containing the compressed data. If dst is nil or too small, allocates a
@@ -81,28 +94,51 @@ func (c *lz4Codec) Decode(dst, src []byte) ([]byte, error) {
 	if cap(dst) == 0 {
 		// Caller didn't provide a buffer. Start with 10x compressed size
 		// as initial guess. LZ4 GUI data often compresses 100:1 or better,
-		// but 10x covers most cases in one attempt.
-		dst = make([]byte, len(src)*10)
+		// but 10x covers most cases in one attempt. Clamp before multiplying:
+		// malformed input must not overflow int or allocate beyond the growth
+		// limit before the limit below gets a chance to run.
+		dst = make([]byte, initialDecodeSize(len(src)))
 	} else {
 		dst = dst[:cap(dst)]
 	}
-
-	// maxDecodeBuf caps the growth strategy to prevent runaway allocation
-	// on corrupt or adversarial input (64 MB covers 4K RGBA frames).
-	const maxDecodeBuf = 64 * 1024 * 1024
+	maxSize := maxDecodeSize(len(src))
 
 	for {
 		n, err := lz4.UncompressBlock(src, dst)
 		if err != nil {
 			// If buffer might be too small, double and retry.
-			if len(dst) < maxDecodeBuf {
-				dst = make([]byte, len(dst)*2)
+			if len(dst) < maxSize {
+				next := len(dst) * 2
+				if next <= len(dst) || next > maxSize {
+					next = maxSize
+				}
+				dst = make([]byte, next)
 				continue
 			}
 			return nil, fmt.Errorf("codec: lz4 decode: %w", err)
 		}
 		return dst[:n], nil
 	}
+}
+
+// initialDecodeSize returns the first allocation used by the nil-destination
+// fallback without allowing len(src)*10 to overflow or exceed the shared
+// payload bound.
+func initialDecodeSize(srcLen int) int {
+	if srcLen > maxDecodeBuf/10 {
+		return maxDecodeSize(srcLen)
+	}
+	return srcLen * 10
+}
+
+// maxDecodeSize returns the largest fallback destination permitted for a
+// compressed block of srcLen bytes. It is overflow-safe and never exceeds the
+// shared protocol allocation bound.
+func maxDecodeSize(srcLen int) int {
+	if srcLen >= maxDecodeBuf/maxDecodeRatio {
+		return maxDecodeBuf
+	}
+	return srcLen * maxDecodeRatio
 }
 
 // ID returns the LZ4 codec protocol identifier (0x01).

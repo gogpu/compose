@@ -85,6 +85,14 @@ func (c *Conn) ReadFrameInto(buf []byte) (protocol.Header, []byte, error) {
 		return protocol.Header{}, nil, fmt.Errorf("socket: decode header: %w", err)
 	}
 
+	// Validate the wire-sized field before converting it to int or allocating.
+	// Header.Decode intentionally accepts the complete uint32 field range for
+	// protocol compatibility; this boundary is where memory use is bounded.
+	if hdr.PayloadSize > protocol.MaxPayloadSize {
+		return protocol.Header{}, nil, fmt.Errorf("%w: declared %d bytes (limit %d)",
+			ErrPayloadTooLarge, hdr.PayloadSize, protocol.MaxPayloadSize)
+	}
+
 	// Read payload.
 	size := int(hdr.PayloadSize)
 	if size == 0 {

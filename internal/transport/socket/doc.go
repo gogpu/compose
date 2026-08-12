@@ -7,8 +7,9 @@
 //
 // [Conn] wraps a [net.Conn] with framed I/O. Each frame on the wire is a
 // 64-byte header (see [protocol.HeaderSize]) followed by PayloadSize bytes
-// of payload. Reads and writes are independently locked, so concurrent
-// producers and consumers are safe on the same connection.
+// of payload. Incoming payloads larger than [protocol.MaxPayloadSize] are
+// rejected before allocation. Reads and writes are independently locked, so
+// concurrent producers and consumers are safe on the same connection.
 //
 // # Listener
 //

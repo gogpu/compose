@@ -306,6 +306,29 @@ func TestDecode_ExactBuffer(t *testing.T) {
 	}
 }
 
+func TestDecode_AcceptsMaximumWirePayloadSizes(t *testing.T) {
+	h := Header{
+		Magic:            Magic,
+		Version:          ProtocolVersion,
+		MsgType:          MsgFrame,
+		PayloadSize:      math.MaxUint32,
+		UncompressedSize: math.MaxUint32,
+	}
+	buf := make([]byte, HeaderSize)
+	if err := Encode(&h, buf); err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+
+	got, err := Decode(buf)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if got.PayloadSize != math.MaxUint32 || got.UncompressedSize != math.MaxUint32 {
+		t.Fatalf("decoded sizes = (%d, %d), want (%d, %d)",
+			got.PayloadSize, got.UncompressedSize, uint32(math.MaxUint32), uint32(math.MaxUint32))
+	}
+}
+
 func TestHeader_ReservedZeroed(t *testing.T) {
 	// After encoding, reserved bytes should be zero.
 	h := Header{

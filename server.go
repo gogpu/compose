@@ -424,6 +424,18 @@ func (s *Server) decodePayload(hdr protocol.Header, payload []byte) ([]byte, err
 		return payload, nil
 	}
 
+	// Header.Decode keeps the uint32 wire representation permissive, but do
+	// not turn an untrusted declared size into an allocation at this boundary.
+	// A non-empty compressed frame must declare its original size; otherwise
+	// the codec would have to use its allocation fallback.
+	if hdr.UncompressedSize > protocol.MaxPayloadSize {
+		return nil, fmt.Errorf("compose: uncompressed payload size %d exceeds limit %d",
+			hdr.UncompressedSize, protocol.MaxPayloadSize)
+	}
+	if len(payload) > 0 && hdr.UncompressedSize == 0 {
+		return nil, fmt.Errorf("compose: compressed payload has zero uncompressed size")
+	}
+
 	// Look up the codec by compression ID.
 	c := codec.Get(byte(hdr.Compression))
 	if c == nil {
