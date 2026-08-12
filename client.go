@@ -131,20 +131,29 @@ func (c *Client) PublishFrame(f Frame) error {
 	pixels := f.Pixels
 	uncompressedSize := saturateUint32(len(pixels))
 
+	// Snapshot the codec while holding the client lock, then release it before
+	// doing the potentially expensive encode. Keeping the snapshot local makes
+	// the compression flags and payload use the same codec even if
+	// SetCompression runs concurrently.
+	c.mu.RLock()
+	frameCodec := c.codec
+	c.mu.RUnlock()
+
 	// Compress if codec is not raw.
 	var flags protocol.Flag
 	compressionID := protocol.CompressionNone
 
-	if c.codec.ID() != codec.IDRaw {
-		maxSize := c.codec.MaxEncodedSize(len(pixels))
+	codecID := frameCodec.ID()
+	if codecID != codec.IDRaw {
+		maxSize := frameCodec.MaxEncodedSize(len(pixels))
 		dst := make([]byte, maxSize)
-		compressed, err := c.codec.Encode(dst, pixels)
+		compressed, err := frameCodec.Encode(dst, pixels)
 		if err != nil {
 			return fmt.Errorf("compose: compress frame: %w", err)
 		}
 		pixels = compressed
 		flags = flags.Set(protocol.FlagCompressed)
-		compressionID = protocol.Compression(c.codec.ID())
+		compressionID = protocol.Compression(codecID)
 	}
 
 	// Set dirty rect flags.
