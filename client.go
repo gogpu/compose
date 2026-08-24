@@ -15,12 +15,12 @@ import (
 
 // saturateUint16 converts v to uint16, clamping to math.MaxUint16 on overflow.
 func saturateUint16(v int) uint16 {
-	return uint16(min(max(v, 0), math.MaxUint16)) //nolint:gosec // clamped to [0, MaxUint16]
+	return uint16(min(max(v, 0), math.MaxUint16))
 }
 
 // saturateUint16from32 converts v to uint16, clamping to math.MaxUint16 on overflow.
 func saturateUint16from32(v uint32) uint16 {
-	return uint16(min(v, math.MaxUint16)) //nolint:gosec // clamped to [0, MaxUint16]
+	return uint16(min(v, math.MaxUint16))
 }
 
 // saturateUint32 converts v to uint32, clamping to math.MaxUint32 on overflow.
@@ -31,7 +31,7 @@ func saturateUint32(v int) uint32 {
 	if uint64(v) > uint64(math.MaxUint32) {
 		return math.MaxUint32
 	}
-	return uint32(v) //nolint:gosec // checked to be in [0, MaxUint32]
+	return uint32(v)
 }
 
 // Client is the module-side endpoint that connects to a compositor and
