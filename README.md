@@ -251,6 +251,16 @@ The `compose` library is part of [GoGPU](https://github.com/gogpu) — a Pure Go
 | **[compose](https://github.com/gogpu/compose)** | **Multi-process composition (this library)** |
 | [systray](https://github.com/gogpu/systray) | System tray (Win32/macOS/Linux) |
 
+## Star History
+
+<a href="https://starhistory.io">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.starhistory.io/png?repos=gogpu/compose&style=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.starhistory.io/png?repos=gogpu/compose&style=professional" />
+   <img alt="Star History Chart" src="https://api.starhistory.io/png?repos=gogpu/compose" width="800" />
+ </picture>
+</a>
+
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
